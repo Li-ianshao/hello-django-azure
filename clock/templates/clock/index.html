@@ -4,8 +4,26 @@
 <head>
   <meta charset="UTF-8">
   <title>Digital Clock</title>
-  {% load static %}
-  <link rel="stylesheet" type="text/css" href="{% static 'clock/style.css' %}">
+  <style>
+    body {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 60px;
+        text-align: center;
+        margin-top: 20%;
+    }
+
+    button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        text-align: center;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
   <div id="clock">--:--:--</div>
