@@ -1,0 +1,63 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 30px;
+    background-color: #f5f7fa;
+}
+
+/* 條件式樣式 */
+.rsi-high {
+    background-color: #ffd6d6 !important;  /* 淡紅色 */
+    color: #a80000;
+    font-weight: bold;
+}
+
+.rsi-low {
+    background-color: #d6ecff !important;  /* 淡藍色 */
+    color: #004f9e;
+    font-weight: bold;
+}
+
+.no-dividend {
+    background-color: #eeeeee !important;
+    color: #999;
+}
+
+.high-volume {
+    background-color: #e2f7e2 !important;  /* 淡綠色 */
+    font-weight: bold;
+}
+
+/* 基本樣式 */
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px 16px;
+    text-align: center;
+}
+
+th {
+    background-color: #007acc;
+    color: white;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tr:hover {
+    background-color: #e8f4fd;
+}

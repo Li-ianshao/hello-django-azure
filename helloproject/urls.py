@@ -1,14 +1,12 @@
-from django.http import HttpResponse
-from django.urls import path
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic.base import RedirectView
+from django.urls import reverse_lazy
 
 urlpatterns = [
+    path('', RedirectView.as_view(url=reverse_lazy('login'))),  # 預設導向登入頁
+    path('clock/', include('clock.urls')),                      # 登入成功後導向這裡
+    path('stocks/', include('stocks.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),     # 提供 /login /logout 等功能
     path('admin/', admin.site.urls),
-    path('', include('clock.urls')),  # 指到 clock app
 ]
-
-
-def home(request):
-    return HttpResponse("Hello, world! This is a Django app deployed on Azure.")
-

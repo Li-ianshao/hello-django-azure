@@ -1,29 +1,33 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Digital Clock</title>
-    <style>
-        body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 60px;
-            text-align: center;
-            margin-top: 20%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Digital Clock</title>
+  {% load static %}
+  <link rel="stylesheet" type="text/css" href="{% static 'clock/style.css' %}">
 </head>
 <body>
-    <div id="clock">--:--:--</div>
+  <div id="clock">--:--:--</div>
 
-    <script>
-        function updateClock() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString();
-            document.getElementById('clock').textContent = timeString;
-        }
+  <a href="/stocks/">
+    <button>查看股票資料 📈</button>
+  </a>
 
-        setInterval(updateClock, 1000);
-        updateClock();  // initial call
-    </script>
+  <form action="{% url 'logout' %}" method="post">
+      {% csrf_token %}
+      <button type="submit">登出</button>
+  </form>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString();
+      document.getElementById('clock').textContent = timeString;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();  // initial call
+  </script>
 </body>
 </html>
