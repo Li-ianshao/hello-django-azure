@@ -32,6 +32,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
+STATIC_URL = '/static/'
+
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
@@ -58,4 +60,3 @@ LOGIN_REDIRECT_URL = '/clock/' # 登入成功後導向這裡
 LOGOUT_REDIRECT_URL = '/accounts/login/' 
 
 DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
-STATIC_URL = '/static/'
