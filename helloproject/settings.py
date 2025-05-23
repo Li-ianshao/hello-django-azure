@@ -17,6 +17,11 @@ INSTALLED_APPS = [
     'stocks',
 ]
 
+#信任網站
+CSRF_TRUSTED_ORIGINS = [
+    'https://mysite-django-new-ajbxhpc8fkatepcm.centralus-01.azurewebsites.net',
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
