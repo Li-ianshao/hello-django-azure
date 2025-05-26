@@ -4,7 +4,7 @@ import yfinance as yf
 import pandas as pd
 
 def stock_table(request):
-    tickers = ['AAPL', 'MSFT', 'TSLA', 'KO', 'T', 'NFLX', 'MCD', 'PEP', 'XOM', 'WMT', 'JNJ', 'NVDA', 'META', 'MSFT']
+    tickers = ['AAPL', 'MSFT', 'TSLA', 'KO', 'T', 'NFLX', 'MCD', 'PEP', 'XOM', 'WMT', 'JNJ', 'NVDA', 'META']
     stock_data = []
 
     for symbol in tickers:
@@ -52,7 +52,7 @@ def stock_table(request):
                 dividend_ratio = 'N/A'
 
             # 殖利率（年度總配息 ÷ 價格）
-            dividend_yield = round(stock.info.get("dividendYield", 0) * 100, 2) if stock.info.get("dividendYield") else 'N/A'
+            dividend_yield = stock.info.get("dividendYield", 0)#round(stock.info.get("dividendYield", 0) * 100, 2) if stock.info.get("dividendYield") else 'N/A'
 
 
             stock_data.append({

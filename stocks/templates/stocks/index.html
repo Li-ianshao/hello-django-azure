@@ -10,7 +10,7 @@
         margin: 30px;
         background-color: #f5f7fa;
     }
-    
+
     button {
         padding: 10px 30px;
         background-color: #007acc;
@@ -50,11 +50,43 @@
         margin-bottom: 20px;
     }
 
+    /* 外層容器控制可橫向滑動 */
+    .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 auto;
+    }
+
     table {
         width: 100%;
         border-collapse: collapse;
         background-color: white;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        min-width: 1000px; /* 限制最小寬度以避免壓縮 */
+    }
+
+    /* RWD 小螢幕：寬度小於 768px */
+    @media (max-width: 768px) {
+    table {
+        font-size: 12px;
+        min-width: 800px; /* 再壓縮一點 */
+    }
+
+    th, td {
+        padding: 6px 8px;
+    }
+
+    .table-container {
+        padding: 0 10px;
+    }
+    }
+
+    /* 更小螢幕（手機） */
+    @media (max-width: 480px) {
+    table {
+        min-width: 600px;
+        font-size: 11px;
+    }
     }
 
     th, td {
@@ -84,94 +116,177 @@
       {% csrf_token %}
       <button type="submit">登出</button>
   </form>
+
   <h2 style="text-align: center;">📈 Stock Overview</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>代碼</th>
-        <th>收盤價</th>
-        <th>配息日</th>
-        <th>配息</th>
-        <th>此次配息率</th>
-        <th>殖利率</th>
-        <th>當日漲跌幅</th>
-        <th>一年最低價</th>
-        <th>一年最高價</th>
-        <th>RSI</th>
-        <th>volume_Delta</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in stocks %}
-      <tr>
-          <td>{{ s.symbol }}</td>
-          
 
-          <td>{{ s.close|dollar_or_na }}</td>
+  <div class="table-container">
+    <table>
+        <thead>
+        <tr>
+            <th data-index="0" onclick="sortTable(this)">
+                <span class="header-label">代碼</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="1" onclick="sortTable(this)">
+                <span class="header-label">收盤價</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="2" onclick="sortTable(this)">
+                <span class="header-label">配息日</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="3" onclick="sortTable(this)">
+                <span class="header-label">配息</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="4" onclick="sortTable(this)">
+                <span class="header-label">此次配息率</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="5" onclick="sortTable(this)">
+                <span class="header-label">殖利率</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="6" onclick="sortTable(this)">
+                <span class="header-label">當日漲跌幅</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="7" onclick="sortTable(this)">
+                <span class="header-label">一年最低價</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="8" onclick="sortTable(this)">
+                <span class="header-label">一年最高價</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="9" onclick="sortTable(this)">
+                <span class="header-label">RSI</span>
+                <span class="sort-arrow"></span>
+            </th>
+            <th data-index="10" onclick="sortTable(this)">
+                <span class="header-label">volume_Delta</span>
+                <span class="sort-arrow"></span>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for s in stocks %}
+        <tr>
+            <td>{{ s.symbol }}</td>
+            
 
-          <td title="{% if s.dividend_date == 'N/A' %}無可用配息日資料{% else %}配息日 (ex-dividend date){% endif %}">
-              {{ s.ex_dividend_date }}
-          </td>
+            <td>{{ s.close|dollar_or_na }}</td>
 
-          <td title="{% if not s.dividend or s.dividend == 0 or s.dividend == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
-              class="{% if not s.dividend or s.dividend == 0 %}no-dividend{% endif %}">
-              {{ s.dividend|dollar_or_na }}
-          </td>
+            <td title="{% if s.dividend_date == 'N/A' %}無可用配息日資料{% else %}配息日 (ex-dividend date){% endif %}">
+                {{ s.ex_dividend_date }}
+            </td>
 
-          <td title="{% if not s.dividend_ratio or s.dividend_ratio == 0 or s.dividend_ratio == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
-              class="{% if not s.dividend_ratio or s.dividend_ratio == 0 %}no-dividend{% endif %}">
-              {{ s.dividend_ratio|percent_or_na }}
-          </td>
+            <td title="{% if not s.dividend or s.dividend == 0 or s.dividend == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
+                class="{% if not s.dividend or s.dividend == 0 %}no-dividend{% endif %}">
+                {{ s.dividend|dollar_or_na }}
+            </td>
 
-          <td title="{% if not s.yield or s.yield == 0 or s.yield == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
-              class="{% if not s.yield or s.yield == 0 %}no-dividend{% endif %}">
-              {{ s.yield|percent_or_na }}
-          </td>
+            <td title="{% if not s.dividend_ratio or s.dividend_ratio == 0 or s.dividend_ratio == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
+                class="{% if not s.dividend_ratio or s.dividend_ratio == 0 %}no-dividend{% endif %}">
+                {{ s.dividend_ratio|percent_or_na }}
+            </td>
 
-          <td title="{% if s.price_change > 10 %}變動福大{% else %}正常波動{% endif %}"
-              class="{% if s.price_change|default:0 > 10 %}high-volume{% endif %}">
-              {{ s.price_change|percent_or_na }}
-          </td>
+            <td title="{% if not s.yield or s.yield == 0 or s.yield == 'N/A' %}此股票不配息{% else %}配息中{% endif %}"
+                class="{% if not s.yield or s.yield == 0 %}no-dividend{% endif %}">
+                {{ s.yield|percent_or_na }}
+            </td>
 
-          <td>
-              {{ s.year_low }}
-          </td>
+            <td title="{% if s.price_change > 10 %}變動福大{% else %}正常波動{% endif %}"
+                class="{% if s.price_change|default:0 > 10 %}high-volume{% endif %}">
+                {{ s.price_change|percent_or_na }}
+            </td>
 
-          <td>
-              {{ s.year_high }}
-          </td>
+            <td>
+                {{ s.year_low }}
+            </td>
 
-          <td title="{% if s.rsi != 'N/A' %}
-                      {% if s.rsi > 70 %}
-                          RSI 過熱 (>70)
-                      {% elif s.rsi < 30 %}
-                          RSI 超跌 (<30)
-                      {% else %}
-                          RSI 正常範圍
-                      {% endif %}
-                    {% else %}
-                        無 RSI 資料
-                    {% endif %}"
-              class="
-                  {% if s.rsi != 'N/A' %}
-                      {% if s.rsi > 70 %}
-                          rsi-high
-                      {% elif s.rsi < 30 %}
-                          rsi-low
-                      {% endif %}
-                  {% endif %}
-              ">
-              {{ s.rsi }}
-          </td>
+            <td>
+                {{ s.year_high }}
+            </td>
 
-          <td title="{% if s.volume_delta > 100 %}高成交量{% else %}正常成交量{% endif %}"
-              class="{% if s.volume_delta|default:0 > 100 %}high-volume{% endif %}">
-              {{ s.volume_delta|percent_or_na }}
-          </td>
-          
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+            <td title="{% if s.rsi != 'N/A' %}
+                        {% if s.rsi > 70 %}
+                            RSI 過熱 (>70)
+                        {% elif s.rsi < 30 %}
+                            RSI 超跌 (<30)
+                        {% else %}
+                            RSI 正常範圍
+                        {% endif %}
+                        {% else %}
+                            無 RSI 資料
+                        {% endif %}"
+                class="
+                    {% if s.rsi != 'N/A' %}
+                        {% if s.rsi > 70 %}
+                            rsi-high
+                        {% elif s.rsi < 30 %}
+                            rsi-low
+                        {% endif %}
+                    {% endif %}
+                ">
+                {{ s.rsi }}
+            </td>
+
+            <td title="{% if s.volume_delta > 100 %}高成交量{% else %}正常成交量{% endif %}"
+                class="{% if s.volume_delta|default:0 > 100 %}high-volume{% endif %}">
+                {{ s.volume_delta|percent_or_na }}
+            </td>
+            
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+  </div>
 </body>
+<script>
+    let currentSortedIndex = null;
+    let currentAscending = true;
+
+    function sortTable(th) {
+    const n = parseInt(th.dataset.index);
+    const table = document.querySelector("table");
+    const rows = Array.from(table.rows).slice(1);
+    const isNumeric = !isNaN(parseFloat(rows[1].cells[n].innerText.replace('%', '').replace('$', '')));
+
+    // 切換排序方向
+    let asc = true;
+    if (currentSortedIndex === n) {
+        asc = !currentAscending;
+    }
+    currentSortedIndex = n;
+    currentAscending = asc;
+
+    rows.sort((a, b) => {
+        let x = a.cells[n].innerText.replace('%', '').replace('$', '');
+        let y = b.cells[n].innerText.replace('%', '').replace('$', '');
+
+        if (x === 'N/A') return 1;
+        if (y === 'N/A') return -1;
+
+        if (isNumeric) {
+        x = parseFloat(x);
+        y = parseFloat(y);
+        }
+
+        return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+    });
+
+    for (let row of rows) {
+        table.tBodies[0].appendChild(row);
+    }
+
+    // ✅ 清除所有箭頭
+    document.querySelectorAll(".sort-arrow").forEach(span => {
+        span.textContent = "";
+    });
+
+    // ✅ 加上當前箭頭
+    th.querySelector(".sort-arrow").textContent = asc ? " ↑" : " ↓";
+    }
+</script>
 </html>
