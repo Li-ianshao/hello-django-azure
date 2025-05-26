@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.http import JsonResponse
 from datetime import datetime
 import yfinance as yf
 import pandas as pd
@@ -76,3 +77,17 @@ def stock_table(request):
 
    
     return render(request, 'stocks/index.html', {'stocks': stock_data})
+    
+def stock_detail(request, symbol):
+    stock = yf.Ticker(symbol)
+    hist = stock.history(period='3mo')
+
+    chart_data = hist[['Close']].reset_index()
+    chart_data['Date'] = chart_data['Date'].dt.strftime('%Y-%m-%d')
+    chart_json = chart_data.to_json(orient='records')
+
+    context = {
+        'symbol': symbol,
+        'chart_data': chart_json,
+    }
+    return render(request, 'stocks/detail.html', context)

@@ -1,0 +1,61 @@
+<!-- stocks/templates/stocks/detail.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ symbol }} 詳細資訊</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <!-- 返回上一頁按鈕 -->
+<div style="margin: 20px 0;">
+  <button onclick="window.history.back()" style="
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  ">
+    ← 返回上一頁
+  </button>
+</div>
+  <h2>{{ symbol }} 最近股價走勢</h2>
+  <div id="chart"></div>
+
+  <script>
+    const data = {{ chart_data|safe }};
+    const svg = d3.select("#chart")
+                  .append("svg")
+                  .attr("width", 600)
+                  .attr("height", 400);
+
+    const x = d3.scaleTime()
+                .domain(d3.extent(data, d => new Date(d.Date)))
+                .range([50, 550]);
+
+    const y = d3.scaleLinear()
+                .domain([d3.min(data, d => d.Close), d3.max(data, d => d.Close)])
+                .range([350, 50]);
+
+    const line = d3.line()
+                   .x(d => x(new Date(d.Date)))
+                   .y(d => y(d.Close));
+
+    svg.append("path")
+       .datum(data)
+       .attr("fill", "none")
+       .attr("stroke", "steelblue")
+       .attr("stroke-width", 2)
+       .attr("d", line);
+
+    svg.append("g")
+       .attr("transform", "translate(0,350)")
+       .call(d3.axisBottom(x).ticks(5));
+
+    svg.append("g")
+       .attr("transform", "translate(50,0)")
+       .call(d3.axisLeft(y));
+  </script>
+</body>
+</html>
