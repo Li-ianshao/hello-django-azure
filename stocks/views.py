@@ -4,7 +4,7 @@ import yfinance as yf
 import pandas as pd
 
 def stock_table(request):
-    tickers = ['AAPL', 'MSFT', 'TSLA']
+    tickers = ['AAPL', 'MSFT', 'TSLA', 'KO', 'T', 'NFLX', 'MCD', 'PEP', 'XOM', 'WMT', 'JNJ', 'NVDA', 'META', 'MSFT']
     stock_data = []
 
     for symbol in tickers:
@@ -12,29 +12,61 @@ def stock_table(request):
             stock = yf.Ticker(symbol)
             hist = stock.history(period="6mo")
 
-            # 計算 RSI
-            delta = hist['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            latest_rsi = round(rsi.iloc[-1], 2) if not rsi.empty else 'N/A'
+            # 收盤價
+            close = round(hist["Close"][-1],2) if not hist.empty else 'N/A'
 
-            #配息日格式轉換
-            timestamp = stock.info.get('exDividendDate', None)
+            # RSI 計算（14日）
+            delta = hist["Close"].diff()
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=14).mean().iloc[-1]
+            avg_loss = loss.rolling(window=14).mean().iloc[-1]
+            rs = avg_gain / avg_loss if avg_loss != 0 else 0
+            rsi = round(100 - (100 / (1 + rs)), 2) if avg_gain and avg_loss else 'N/A'
 
-            if timestamp:
-                ex_div_date = datetime.fromtimestamp(timestamp).date()  # 轉成 YYYY-MM-DD 格式
-            else:
-                ex_div_date = 'N/A'
+            # 當日漲跌幅 %
+            try:
+                price_change = round(((hist["Close"][-1] - hist["Close"][-2]) / hist["Close"][-2]) * 100, 2)
+            except:
+                price_change = 'N/A'
+
+            # volume delta
+            try:
+                volume = stock.info.get("volume", 0)
+                avg_volume = stock.info.get("averageVolume", 0)
+                volume_delta = round((volume/avg_volume)*100,2)
+            except:
+                volume_delta = 'N/A'
+
+            # 配息日
+            ex_div_ts = stock.info.get("exDividendDate", None)
+            ex_div_date = datetime.fromtimestamp(ex_div_ts).strftime('%Y-%m-%d') if ex_div_ts else 'N/A'
+
+            # 每股配息
+            dividend = stock.info.get("lastDividendValue", 'N/A')
+
+            # 此次配息率 = 配息 ÷ 收盤價
+            try:
+                dividend_ratio = round(float(dividend) / float(close) * 100, 2)
+            except:
+                dividend_ratio = 'N/A'
+
+            # 殖利率（年度總配息 ÷ 價格）
+            dividend_yield = round(stock.info.get("dividendYield", 0) * 100, 2) if stock.info.get("dividendYield") else 'N/A'
+
 
             stock_data.append({
-                'symbol': symbol,
-                'close': round(hist.tail(1)['Close'][0],2),
-                'volume': stock.info.get('volume', 'N/A'),#int(stock.info['volume']),
-                'dividend': stock.info.get('lastDividendValue', 'N/A'),#stock.info['lastDividendValue'],
-                'dividend_date': ex_div_date,#stock.info['exDividendDate'],
-                'rsi': latest_rsi
+                "symbol": symbol,
+                "close": close,
+                "ex_dividend_date": ex_div_date,
+                "dividend": dividend,
+                "dividend_ratio": dividend_ratio,
+                "yield": dividend_yield,
+                "price_change": price_change,
+                "year_low": stock.info.get("fiftyTwoWeekLow", 'N/A'),
+                "year_high": stock.info.get("fiftyTwoWeekHigh", 'N/A'),
+                "rsi": rsi,
+                "volume_delta": volume_delta,
             })
         except Exception as e:
             stock_data.append({
@@ -42,4 +74,5 @@ def stock_table(request):
                 'error': str(e)
             })
 
+   
     return render(request, 'stocks/index.html', {'stocks': stock_data})

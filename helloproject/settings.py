@@ -14,7 +14,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'clock',
     'stocks',
 ]
 
@@ -51,7 +50,7 @@ TEMPLATES = [{
 
 WSGI_APPLICATION = "helloproject.wsgi.application"
 
-LOGIN_REDIRECT_URL = '/clock/' # 登入成功後導向這裡
+LOGIN_REDIRECT_URL = '/stocks/' # 登入成功後導向這裡
 LOGOUT_REDIRECT_URL = '/accounts/login/' 
 
 DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}

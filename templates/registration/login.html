@@ -29,6 +29,18 @@
             border: none;
             border-radius: 5px;
         }
+        #loading {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+            animation: blink 1s linear infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -36,7 +48,16 @@
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">登入</button>
+        <button id="login-btn" type="submit">登入</button>
+        <div id="loading" style="display:none;">登入中，請稍候...</div>
     </form>
 </body>
+<script>
+    document.querySelector("form").addEventListener("submit", function() {
+        // 顯示 loading 訊息
+        document.getElementById("login-btn").disabled = true;
+        document.getElementById("login-btn").innerText = "登入中...";
+        document.getElementById("loading").style.display = "block";
+    });
+</script>
 </html>
