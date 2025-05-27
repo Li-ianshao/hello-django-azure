@@ -1,61 +1,319 @@
-<!-- stocks/templates/stocks/detail.html -->
+<!-- templates/stocks/detail.html -->
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <title>{{ symbol }} 詳細資訊</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    .tooltip {
+      position: absolute;
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .candle.up {
+      fill: green;
+    }
+    .candle.down {
+      fill: red;
+    }
+    .volume {
+      opacity: 0.5;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+    }
+    .line {
+      fill: none;
+      stroke-width: 1.5;
+    }
+    .line.upper { stroke: orange; }
+    .line.middle { stroke: blue; }
+    .line.lower { stroke: orange; }
+    .line.macd { stroke: steelblue; }
+    .line.signal { stroke: crimson; stroke-dasharray: 4; }
+    .bar.macd { opacity: 0.5; }
+    .line.rsi { stroke: purple; }
+    .line.zero { stroke: gray; stroke-dasharray: 2; }
+  </style>
 </head>
 <body>
-  <!-- 返回上一頁按鈕 -->
-<div style="margin: 20px 0;">
-  <button onclick="window.history.back()" style="
-    padding: 8px 16px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  ">
-    ← 返回上一頁
-  </button>
-</div>
-  <h2>{{ symbol }} 最近股價走勢</h2>
+  <div style="margin: 20px 0;">
+    <a href="/stocks/">
+      <button style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        ← 返回股票總覽
+      </button>
+    </a>
+  </div>
+
+  <h2>{{ symbol }} 最近股價跌動圖表（螃蟲圖）</h2>
   <div id="chart"></div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- RSI/MACD/BB Chart Containers -->
+  <h2>相對強弱指標（RSI）</h2>
+  <div id="rsiChart"></div>
+  <h2>移動平均收斂擴散指標（MACD）</h2>
+  <div id="macdChart"></div>
 
   <script>
-    const data = {{ chart_data|safe }};
+    const data = JSON.parse(`{{ chart_data|escapejs }}`);
+    const svgWidth = document.body.clientWidth;
+    const svgHeight = 900;
+    const margin = {top: 20, right: 30, bottom: 100, left: 60};
+    const width = svgWidth - margin.left - margin.right;
+    const height = svgHeight - margin.top - margin.bottom;
+    const candleHeight = height * 0.7;
+    const volumeHeight = height * 0.3;
+
+    console.log(data)
+
     const svg = d3.select("#chart")
-                  .append("svg")
-                  .attr("width", 600)
-                  .attr("height", 400);
+      .append("svg")
+      .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+      .attr("preserveAspectRatio", "xMidYMid meet");
 
-    const x = d3.scaleTime()
-                .domain(d3.extent(data, d => new Date(d.Date)))
-                .range([50, 550]);
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const y = d3.scaleLinear()
-                .domain([d3.min(data, d => d.Close), d3.max(data, d => d.Close)])
-                .range([350, 50]);
+    const parseDate = d3.timeParse("%Y-%m-%d");
+    data.forEach(d => {
+      d.date = parseDate(d.date);
+      d.open = +d.open;
+      d.close = +d.close;
+      d.high = +d.high;
+      d.low = +d.low;
+      d.volume = +d.volume;
+      d.rsi = d.rsi !== null ? +d.rsi : null;
+      d.macd = +d.macd;
+      d.signal = +d.signal;
+      d.histogram = +d.histogram;
+    });
 
-    const line = d3.line()
-                   .x(d => x(new Date(d.Date)))
-                   .y(d => y(d.Close));
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.date))
+      .range([0, width])
+      .padding(0.3);
 
-    svg.append("path")
-       .datum(data)
-       .attr("fill", "none")
-       .attr("stroke", "steelblue")
-       .attr("stroke-width", 2)
-       .attr("d", line);
+    const yPrice = d3.scaleLinear()
+      .domain([d3.min(data, d => d.low), d3.max(data, d => d.high)])
+      .range([candleHeight, 0]);
 
-    svg.append("g")
-       .attr("transform", "translate(0,350)")
-       .call(d3.axisBottom(x).ticks(5));
+    const yVolume = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.volume)])
+      .range([volumeHeight, 0]);
 
-    svg.append("g")
-       .attr("transform", "translate(50,0)")
-       .call(d3.axisLeft(y));
+    const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%m-%d"));
+    const yAxisPrice = d3.axisLeft(yPrice);
+    const yAxisVolume = d3.axisLeft(yVolume).ticks(3);
+
+    g.append("g")
+      .attr("transform", `translate(0,${candleHeight})`)
+      .call(xAxis)
+      .selectAll("text")
+      .attr("transform", "rotate(-45)")
+      .style("text-anchor", "end");
+
+    g.append("g").call(yAxisPrice);
+
+    const tooltip = d3.select("#tooltip");
+
+    g.selectAll(".stem")
+      .data(data)
+      .enter()
+      .append("line")
+      .attr("class", "stem")
+      .attr("x1", d => x(d.date) + x.bandwidth()/2)
+      .attr("x2", d => x(d.date) + x.bandwidth()/2)
+      .attr("y1", d => yPrice(d.high))
+      .attr("y2", d => yPrice(d.low))
+      .attr("stroke", "black");
+
+    g.selectAll(".candle")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", d => "candle " + (d.close > d.open ? "up" : "down"))
+      .attr("x", d => x(d.date))
+      .attr("y", d => yPrice(Math.max(d.open, d.close)))
+      .attr("width", x.bandwidth())
+      .attr("height", d => Math.max(1, Math.abs(yPrice(d.open) - yPrice(d.close))))
+      .on("mouseover", function(event, d) {
+        tooltip.style("opacity", 1)
+          .html(`<strong>${d3.timeFormat('%Y-%m-%d')(d.date)}</strong><br>
+            Open: ${d.open.toFixed(2)}<br>
+            Close: ${d.close.toFixed(2)}<br>
+            High: ${d.high.toFixed(2)}<br>
+            Low: ${d.low.toFixed(2)}<br>
+            Volume: ${d.volume.toLocaleString()}`)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", () => tooltip.style("opacity", 0));
+
+    const volumeGroup = g.append("g")
+      .attr("transform", `translate(0,${candleHeight + 30})`);
+
+    volumeGroup.append("g").call(yAxisVolume);
+
+    volumeGroup.selectAll(".volume")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "volume")
+      .attr("x", d => x(d.date))
+      .attr("width", x.bandwidth())
+      .attr("y", d => yVolume(d.volume))
+      .attr("height", d => volumeHeight - yVolume(d.volume))
+      .attr("fill", d => d.close > d.open ? "green" : "red")
+      .on("mouseover", function(event, d) {
+        tooltip.style("opacity", 1)
+          .html(`<strong>${d3.timeFormat('%Y-%m-%d')(d.date)}</strong><br>Volume: ${d.volume.toLocaleString()}`)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", () => tooltip.style("opacity", 0));
+
+    const lineUpper = d3.line()
+      .defined(d => d.bb_upper != null)
+      .x(d => x(d.date) + x.bandwidth()/2)
+      .y(d => yPrice(d.bb_upper));
+
+    const lineMiddle = d3.line()
+      .defined(d => d.bb_middle != null)
+      .x(d => x(d.date) + x.bandwidth()/2)
+      .y(d => yPrice(d.bb_middle));
+
+    const lineLower = d3.line()
+      .defined(d => d.bb_lower != null)
+      .x(d => x(d.date) + x.bandwidth()/2)
+      .y(d => yPrice(d.bb_lower));
+
+    g.append("path")
+      .datum(data)
+      .attr("class", "line upper")
+      .attr("d", lineUpper);
+
+    g.append("path")
+      .datum(data)
+      .attr("class", "line middle")
+      .attr("d", lineMiddle);
+
+    g.append("path")
+      .datum(data)
+      .attr("class", "line lower")
+      .attr("d", lineLower);
+
+    // RSI Chart
+    const rsiMargin = {top: 20, right: 30, bottom: 30, left: 60};
+    const rsiWidth = svgWidth - rsiMargin.left - rsiMargin.right;
+    const rsiHeight = 200;
+
+    const xRSI = d3.scaleTime()
+      .domain(d3.extent(data, d => d.date))
+      .range([0, rsiWidth]);
+
+    const yRSI = d3.scaleLinear()
+      .domain([0, 100])
+      .range([rsiHeight, 0]);
+
+    const rsiSvg = d3.select("#rsiChart")
+      .append("svg")
+      .attr("width", svgWidth)
+      .attr("height", rsiHeight + rsiMargin.top + rsiMargin.bottom)
+      .append("g")
+      .attr("transform", `translate(${rsiMargin.left},${rsiMargin.top})`);
+
+    rsiSvg.append("g").call(d3.axisLeft(yRSI));
+    rsiSvg.append("g")
+      .attr("transform", `translate(0,${rsiHeight})`)
+      .call(d3.axisBottom(xRSI).tickFormat(d3.timeFormat("%m-%d")));
+
+    rsiSvg.append("line")
+      .attr("class", "line zero")
+      .attr("x1", 0).attr("x2", rsiWidth)
+      .attr("y1", yRSI(70)).attr("y2", yRSI(70));
+
+    rsiSvg.append("line")
+      .attr("class", "line zero")
+      .attr("x1", 0).attr("x2", rsiWidth)
+      .attr("y1", yRSI(30)).attr("y2", yRSI(30));
+
+    const rsiLine = d3.line()
+      .defined(d => d.rsi !== null && !isNaN(d.rsi))
+      .x(d => xRSI(d.date))
+      .y(d => yRSI(d.rsi));
+
+    rsiSvg.append("path")
+      .datum(data)
+      .attr("class", "line rsi")
+      .attr("d", rsiLine);
+
+    // MACD Chart
+    const macdMargin = {top: 20, right: 30, bottom: 30, left: 60};
+    const macdWidth = svgWidth - macdMargin.left - macdMargin.right;
+    const macdHeight = 200;
+
+    const xMACD = d3.scaleTime()
+      .domain(d3.extent(data, d => d.date))
+      .range([0, macdWidth]);
+
+    const yMACD = d3.scaleLinear()
+      .domain([d3.min(data, d => Math.min(d.macd, d.signal, d.histogram)), d3.max(data, d => Math.max(d.macd, d.signal, d.histogram))])
+      .range([macdHeight, 0]);
+
+    const macdSvg = d3.select("#macdChart")
+      .append("svg")
+      .attr("width", svgWidth)
+      .attr("height", macdHeight + macdMargin.top + macdMargin.bottom)
+      .append("g")
+      .attr("transform", `translate(${macdMargin.left},${macdMargin.top})`);
+
+    macdSvg.append("g").call(d3.axisLeft(yMACD));
+    macdSvg.append("g")
+      .attr("transform", `translate(0,${macdHeight})`)
+      .call(d3.axisBottom(xMACD).tickFormat(d3.timeFormat("%m-%d")));
+
+    macdSvg.append("line")
+      .attr("class", "line zero")
+      .attr("x1", 0).attr("x2", macdWidth)
+      .attr("y1", yMACD(0)).attr("y2", yMACD(0));
+
+    const macdLine = d3.line()
+      .defined(d => !isNaN(d.macd))
+      .x(d => xMACD(d.date))
+      .y(d => yMACD(d.macd));
+
+    const signalLine = d3.line()
+      .defined(d => !isNaN(d.signal))
+      .x(d => xMACD(d.date))
+      .y(d => yMACD(d.signal));
+
+    macdSvg.append("path")
+      .datum(data)
+      .attr("class", "line macd")
+      .attr("d", macdLine);
+
+    macdSvg.append("path")
+      .datum(data)
+      .attr("class", "line signal")
+      .attr("d", signalLine);
+
+    macdSvg.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar macd")
+      .attr("x", d => xMACD(d.date) - 2)
+      .attr("y", d => yMACD(Math.max(0, d.histogram)))
+      .attr("width", 4)
+      .attr("height", d => Math.abs(yMACD(d.histogram) - yMACD(0)))
+      .attr("fill", d => d.histogram >= 0 ? "green" : "red");
   </script>
 </body>
 </html>

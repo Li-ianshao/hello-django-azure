@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from datetime import datetime
 import yfinance as yf
 import pandas as pd
+import json
+import pandas as pd
 
 def stock_table(request):
     tickers = ['AAPL', 'MSFT', 'TSLA', 'KO', 'T', 'NFLX', 'MCD', 'PEP', 'XOM', 'WMT', 'JNJ', 'NVDA', 'META']
@@ -82,12 +84,52 @@ def stock_detail(request, symbol):
     stock = yf.Ticker(symbol)
     hist = stock.history(period='3mo')
 
-    chart_data = hist[['Close']].reset_index()
-    chart_data['Date'] = chart_data['Date'].dt.strftime('%Y-%m-%d')
-    chart_json = chart_data.to_json(orient='records')
+    # 計算布林通道（20日平均線 + 上下2個標準差）
+    hist['bb_middle'] = hist['Close'].rolling(window=20).mean()
+    hist['bb_std'] = hist['Close'].rolling(window=20).std()
+    hist['bb_upper'] = hist['bb_middle'] + 2 * hist['bb_std']
+    hist['bb_lower'] = hist['bb_middle'] - 2 * hist['bb_std']
+
+    # RSI 計算 (14日)
+    delta = hist['Close'].diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=14).mean()
+    avg_loss = loss.rolling(window=14).mean()
+    rs = avg_gain / avg_loss
+    hist['rsi'] = 100 - (100 / (1 + rs))
+
+    # MACD 計算 (12, 26, 9)
+    ema12 = hist['Close'].ewm(span=12, adjust=False).mean()
+    ema26 = hist['Close'].ewm(span=26, adjust=False).mean()
+    hist['macd'] = ema12 - ema26
+    hist['signal'] = hist['macd'].ewm(span=9, adjust=False).mean()
+    hist['histogram'] = hist['macd'] - hist['signal']
+
+
+    chart_data = []
+    for i in range(len(hist)):
+        row = hist.iloc[i]
+        chart_data.append({
+            'date': row.name.strftime('%Y-%m-%d'),
+            'open': round(row['Open'], 2),
+            'close': round(row['Close'], 2),
+            'high': round(row['High'], 2),
+            'low': round(row['Low'], 2),
+            'volume': int(row['Volume']) if not pd.isna(row['Volume']) else 0,
+            'bb_upper': round(row['bb_upper'], 2) if not pd.isna(row['bb_upper']) else None,
+            'bb_middle': round(row['bb_middle'], 2) if not pd.isna(row['bb_middle']) else None,
+            'bb_lower': round(row['bb_lower'], 2) if not pd.isna(row['bb_lower']) else None,
+            'date': row.name.strftime('%Y-%m-%d'),
+            'rsi': round(row['rsi'], 2) if not pd.isna(row['rsi']) else None,
+            'macd': round(row['macd'], 2) if not pd.isna(row['macd']) else None,
+            'signal': round(row['signal'], 2) if not pd.isna(row['signal']) else None,
+            'histogram': round(row['histogram'], 2) if not pd.isna(row['histogram']) else None,
+        })
 
     context = {
         'symbol': symbol,
-        'chart_data': chart_json,
+        'chart_data': json.dumps(chart_data)
     }
+
     return render(request, 'stocks/detail.html', context)
